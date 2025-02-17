@@ -22,7 +22,7 @@ our core tech stack includes:
 #### 1 .clone the repo:
 
 ```bash
-git clone https://github.com/yourusername/mew.git
+git clone https://github.com/gupt-ai/mew.git
 cd mew
 ```
 
