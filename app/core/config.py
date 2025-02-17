@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     db_password: str = os.getenv("DB_PASSWORD", "")
     db_port: str = os.getenv("DB_PORT", "")
     db_name: str = os.getenv("DB_NAME", "")
-
+    secret_key: str = os.getenv("SECRET_KEY", "")
     @property
     def supabase_postgres_url(self) -> str:
         escaped_password = quote_plus(self.db_password)

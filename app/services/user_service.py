@@ -4,7 +4,7 @@ from app.core.security import hash_password, verify_password, create_access_toke
 
 def create_user(db: Session, email: str, username: str, name: str, department: str, password: str) -> User:
     hashed = hash_password(password)
-    user = User(email=email, username=username, name=name, department=department, hashed_password=hashed)
+    user = User(email=email, username=username, name=name, department=department, password=hashed)
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -24,7 +24,7 @@ def update_user(db: Session, user_id: int, email: str, username: str, name: str,
 
 def authenticate_user(db: Session, username: str, password: str):
     user = db.query(User).filter(User.username == username).first()
-    if user and verify_password(password, user.hashed_password):
+    if user and verify_password(password, user.password):
         return user
     return None
 

@@ -1,0 +1,511 @@
+Project Path: mew
+
+Source Tree:
+
+```
+mew
+├── README.md
+├── pyproject.toml
+├── api-spec.yaml
+├── app
+│   ├── services
+│   │   ├── user_service.py
+│   │   └── __init__.py
+│   ├── db
+│   │   ├── session.py
+│   │   ├── base.py
+│   │   └── __init__.py
+│   ├── proto
+│   │   └── user.proto
+│   ├── models
+│   │   ├── user.py
+│   │   └── __init__.py
+│   ├── core
+│   │   ├── security.py
+│   │   ├── config.py
+│   │   ├── logging.py
+│   │   └── __init__.py
+│   ├── __init__.py
+│   └── api
+│       ├── routes
+│       │   ├── health.py
+│       │   ├── auth.py
+│       │   └── __init__.py
+│       └── __init__.py
+├── uv.lock
+├── server.py
+└── CONTRIBUTING.md
+
+```
+
+
+
+`/home/aatish/mew/api-spec.yaml`:
+
+```yaml
+openapi: 3.0.3
+info:
+  title: Sanctum API Spec
+  version: 1.0.0
+  description: |
+    API for managing enterprise users, agents, and their knowledge base.
+    Includes endpoints for user signup, agent creation (with KMS key), membership management,
+    uploading documents (files/URLs), importing documents from other agents, and updating system prompts.
+servers:
+  - url: http://localhost:8000/api
+paths:
+  /users/signup:
+    post:
+      summary: Sign up a new user
+      operationId: signupUser
+      requestBody:
+        description: User registration data
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                username:
+                  type: string
+                name:
+                  type: string
+                department:
+                  type: string
+              required:
+                - email
+                - username
+                - name
+                - department
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid input
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        username:
+          type: string
+        name:
+          type: string
+        department:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+
+```
+
+`/home/aatish/mew/app/services/user_service.py`:
+
+```py
+from sqlalchemy.orm import Session
+from app.models.user import User
+from app.core.security import hash_password, verify_password, create_access_token
+
+def create_user(db: Session, email: str, username: str, name: str, department: str, password: str) -> User:
+    hashed = hash_password(password)
+    user = User(email=email, username=username, name=name, department=department, hashed_password=hashed)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+def update_user(db: Session, user_id: int, email: str, username: str, name: str, department: str) -> User:
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return None
+    user.email = email
+    user.username = username
+    user.name = name
+    user.department = department
+    db.commit()
+    db.refresh(user)
+    return user
+
+def authenticate_user(db: Session, username: str, password: str):
+    user = db.query(User).filter(User.username == username).first()
+    if user and verify_password(password, user.hashed_password):
+        return user
+    return None
+
+def login_user(db: Session, username: str, password: str):
+    user = authenticate_user(db, username, password)
+    if not user:
+        return None
+    token = create_access_token({"user_id": user.id})
+    return token, user
+
+```
+
+`/home/aatish/mew/app/db/session.py`:
+
+```py
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from app.core import config
+
+engine = create_engine(config.get_settings().DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+```
+
+`/home/aatish/mew/app/db/base.py`:
+
+```py
+
+
+from app.models import user
+```
+
+`/home/aatish/mew/app/proto/user.proto`:
+
+```proto
+syntax = "proto3";
+
+package user;
+
+service UserService {
+  rpc SignUp (SignUpRequest) returns (UserResponse);
+  rpc EditProfile (EditProfileRequest) returns (UserResponse);
+  rpc Login (LoginRequest) returns (LoginResponse);
+}
+
+message SignUpRequest {
+  string email = 1;
+  string username = 2;
+  string name = 3;
+  string department = 4;
+  string password = 5;
+}
+
+message EditProfileRequest {
+  int32 user_id = 1;
+  string email = 2;
+  string username = 3;
+  string name = 4;
+  string department = 5;
+}
+
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message UserResponse {
+  int32 id = 1;
+  string email = 2;
+  string username = 3;
+  string name = 4;
+  string department = 5;
+}
+
+message LoginResponse {
+  string token = 1;
+  UserResponse user = 2;
+}
+
+```
+
+`/home/aatish/mew/app/models/user.py`:
+
+```py
+from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy.sql import func
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    username = Column(String, unique=True, index=True, nullable=False)
+    name = Column(String, nullable=False)
+    department = Column(String, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+```
+
+`/home/aatish/mew/app/core/security.py`:
+
+```py
+import bcrypt
+import jwt
+from app.core.config import get_settings
+
+
+def hash_password(password: str) -> str:
+    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+    return hashed.decode("utf-8")
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+
+
+def create_access_token(data: dict) -> str:
+    return jwt.encode(data, get_settings.SECRET_KEY, algorithm="HS256")
+
+```
+
+`/home/aatish/mew/app/core/config.py`:
+
+```py
+from functools import lru_cache
+import os
+from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
+from urllib.parse import quote_plus
+
+load_dotenv()
+
+
+class Settings(BaseSettings):
+    db_user: str = os.getenv("DB_USER", "")
+    db_host: str = os.getenv("DB_HOST", "")
+    db_password: str = os.getenv("DB_PASSWORD", "")
+    db_port: str = os.getenv("DB_PORT", "")
+    db_name: str = os.getenv("DB_NAME", "")
+
+    @property
+    def supabase_postgres_url(self) -> str:
+        escaped_password = quote_plus(self.db_password)
+
+        return (
+            f"postgresql+psycopg://{self.db_user}:{escaped_password}"
+            f"@{self.db_host}:{self.db_port}/{self.db_name}"
+        )
+
+    @property
+    def async_postgres_url(self) -> str:
+        escaped_password = quote_plus(self.db_password)
+
+        return (
+            f"postgresql+asyncpg://{self.db_user}:{escaped_password}"
+            f"@{self.db_host}:{self.db_port}/{self.db_name}"
+        )
+
+    class Config:
+        env_file = ".env"
+        case_sensitive = False
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
+
+```
+
+`/home/aatish/mew/app/core/logging.py`:
+
+```py
+import logging
+from fastapi import Request
+from starlette.middleware.base import BaseHTTPMiddleware
+from typing import Callable
+import time
+
+from uvicorn.logging import ColourizedFormatter
+
+
+def setup_logging(name: str):
+    log = logging.getLogger(name)
+
+    if log.hasHandlers():
+        return log
+
+    root = logging.getLogger()
+    if not root.handlers:
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+
+        formatter = ColourizedFormatter(
+            fmt="%(levelprefix)s %(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+        )
+        console_handler.setFormatter(formatter)
+
+        root.addHandler(console_handler)
+        root.setLevel(logging.INFO)
+
+    log.propagate = True
+    log.setLevel(logging.INFO)
+
+    return log
+
+
+logger = setup_logging(__name__)
+
+
+class LoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next: Callable):
+        start_time = time.time()
+        logger.info(f"Request started: {request.method} {request.url.path}")
+
+        try:
+            response = await call_next(request)
+            duration = time.time() - start_time
+            logger.info(
+                f"Request completed: {request.method} {request.url.path} "
+                f"- Status: {response.status_code} - Duration: {duration:.2f}s"
+            )
+            return response
+        except Exception as e:
+            logger.error(
+                f"Request failed: {request.method} {request.url.path} - Error: {str(e)}"
+            )
+            raise
+
+```
+
+`/home/aatish/mew/app/api/routes/health.py`:
+
+```py
+from fastapi import APIRouter
+from app.core.logging import setup_logging
+
+
+router = APIRouter()
+logger = setup_logging(__name__)
+
+
+@router.get("/", response_model=dict)
+async def health_check():
+    logger.info("Health check endpoint called")
+    return {"healthy": True}
+
+```
+
+`/home/aatish/mew/app/api/routes/auth.py`:
+
+```py
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from pydantic import BaseModel
+from app.db.session import SessionLocal
+from app.services import user_service
+
+router = APIRouter()
+
+# Dependency for obtaining a database session
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# Pydantic models for request validation
+class SignUp(BaseModel):
+    email: str
+    username: str
+    name: str
+    department: str
+    password: str
+
+class EditProfile(BaseModel):
+    user_id: int
+    email: str
+    username: str
+    name: str
+    department: str
+
+class Login(BaseModel):
+    username: str
+    password: str
+
+@router.post("/signup", summary="User sign up")
+def signup(user: SignUp, db: Session = Depends(get_db)):
+    created_user = user_service.create_user(db, user.email, user.username, user.name, user.department, user.password)
+    return {
+        "id": created_user.id,
+        "email": created_user.email,
+        "username": created_user.username,
+        "name": created_user.name,
+        "department": created_user.department
+    }
+
+@router.put("/edit-profile", summary="Edit user profile")
+def edit_profile(user: EditProfile, db: Session = Depends(get_db)):
+    updated_user = user_service.update_user(db, user.user_id, user.email, user.username, user.name, user.department)
+    if not updated_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return {
+        "id": updated_user.id,
+        "email": updated_user.email,
+        "username": updated_user.username,
+        "name": updated_user.name,
+        "department": updated_user.department
+    }
+
+@router.post("/login", summary="User login")
+def login(login_data: Login, db: Session = Depends(get_db)):
+    result = user_service.login_user(db, login_data.username, login_data.password)
+    if not result:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect username or password")
+    token, user = result
+    return {
+        "token": token,
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "username": user.username,
+            "name": user.name,
+            "department": user.department
+        }
+    }
+
+```
+
+```
+
+`/home/aatish/mew/server.py`:
+
+```py
+from fastapi import FastAPI
+from app.core.logging import setup_logging, LoggingMiddleware
+from app.api.routes import health, auth
+
+logger = setup_logging(__name__)
+
+
+def create_app() -> FastAPI:
+    app = FastAPI(title="mew - a KB enrichment API")
+
+    app.add_middleware(LoggingMiddleware)
+
+
+    # Include the authentication routes under a common prefix (e.g., /auth)
+    app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
+
+    app.include_router(health.router, tags=["health"])
+
+    return app
+
+
+app = create_app()
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("server:app", host="0.0.0.0", port=8080, reload=True)
+
