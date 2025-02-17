@@ -1,0 +1,16 @@
+[project]
+name = "mew"
+version = "0.1.0"
+description = "KB enrichment API"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.8",
+    "pydantic-settings>=2.7.1",
+    "pydantic>=2.10.6",
+    "python-dotenv>=1.0.1",
+    "uvicorn>=0.34.0",
+]
+
+[dependency-groups]
+dev = ["mypy>=1.15.0", "pytest>=8.3.4", "ruff>=0.9.6"]
