@@ -15,7 +15,7 @@ our core tech stack includes:
 
 - Python 3.12 or higher
 - env vars for supabase
-- uv for dependency management
+- [uv](https://github.com/astral-sh/uv) for dependency management
 
 ### first-time setup
 
