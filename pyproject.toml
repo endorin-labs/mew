@@ -13,9 +13,9 @@ dependencies = [
     "grpcio>=1.70.0",
     "grpcio-tools>=1.70.0",
     "pyjwt>=2.10.1",
-    "sqlalchemy",
-    "bcrypt",
-    "psycopg",
+    "bcrypt>=4.2.1",
+    "psycopg-binary>=3.2.4",
+    "sqlalchemy>=2.0.38",
 ]
 
 [dependency-groups]
