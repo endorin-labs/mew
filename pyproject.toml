@@ -5,12 +5,30 @@ description = "KB enrichment API"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi>=0.115.8",
-    "pydantic-settings>=2.7.1",
-    "pydantic>=2.10.6",
     "python-dotenv>=1.0.1",
-    "uvicorn>=0.34.0",
+    "grpcio>=1.70.0",
+    "grpcio-tools>=1.70.0",
+    "pyjwt>=2.10.1",
+    "bcrypt>=4.2.1",
+    "psycopg-binary>=3.2.4",
+    "sqlalchemy>=2.0.38",
+    "grpclib>=0.4.7",
+    "psycopg>=3.2.4",
+    "colorama>=0.4.6",
+    "types-protobuf>=5.29.1.20250208",
+    "types-colorama>=0.4.15.20240311",
+    "types-greenlet>=3.1.0.20241221",
+    "mypy-protobuf>=3.6.0",
 ]
 
-[dependency-groups]
-dev = ["mypy>=1.15.0", "pytest>=8.3.4", "ruff>=0.9.6"]
+[project.optional-dependencies]
+dev = [
+    "grpc-stubs>=1.53.0.5",
+    "mypy>=1.15.0",
+    "pytest>=8.3.4",
+    "ruff>=0.9.6",
+]
+
+[tool.mypy]
+# handle missing stubs
+ignore_missing_imports = true

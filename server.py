@@ -1,23 +1,31 @@
-from fastapi import FastAPI
-from app.core.logging import setup_logging, LoggingMiddleware
-from app.api.routes import health
+import asyncio
+from grpclib.server import Server
+from grpclib.utils import graceful_exit
+from app.services.user_service import UserService
+from app.core.logging import setup_logging
 
 logger = setup_logging(__name__)
 
 
-def create_app() -> FastAPI:
-    app = FastAPI(title="mew - a KB enrichment API")
+async def start_server():
+    server = Server([UserService()])
 
-    app.add_middleware(LoggingMiddleware)
+    with graceful_exit([server]):
+        await server.start("0.0.0.0", 50051)
+        logger.info("gRPC Server started on port 50051")
 
-    app.include_router(health.router, tags=["health"])
-
-    return app
+        await server.wait_closed()
 
 
-app = create_app()
+def serve():
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(start_server())
+    except KeyboardInterrupt:
+        logger.info("Server shutting down...")
+    finally:
+        loop.close()
+
 
 if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run("server:app", host="0.0.0.0", port=8080, reload=True)
+    serve()

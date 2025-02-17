@@ -1,0 +1,474 @@
+openapi: 3.0.3
+info:
+  title: Sanctum API Spec
+  version: 1.0.0
+  description: |
+    API for managing enterprise users, agents, and their knowledge base.
+    Includes endpoints for user signup, agent creation (with KMS key), membership management,
+    uploading documents (files/URLs), importing documents from other agents, and updating system prompts.
+servers:
+  - url: http://localhost:8000/api
+paths:
+  /users/signup:
+    post:
+      summary: Sign up a new user
+      operationId: signupUser
+      requestBody:
+        description: User registration data
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                username:
+                  type: string
+                name:
+                  type: string
+                department:
+                  type: string
+              required:
+                - email
+                - username
+                - name
+                - department
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid input
+
+  /agents:
+    post:
+      summary: Create a new agent
+      operationId: createAgent
+      requestBody:
+        description: Agent creation data
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                creator_id:
+                  type: integer
+                base_agent_id:
+                  type: integer
+                  nullable: true
+                name:
+                  type: string
+                goals:
+                  type: string
+                description:
+                  type: string
+                system_prompt:
+                  type: string
+                kms_key:
+                  type: string
+              required:
+                - creator_id
+                - name
+                - kms_key
+      responses:
+        '201':
+          description: Agent created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '400':
+          description: Invalid input
+
+  /agents/{agent_id}:
+    get:
+      summary: Get agent details
+      operationId: getAgent
+      parameters:
+        - name: agent_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Agent details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '404':
+          description: Agent not found
+
+  /agents/{agent_id}/members:
+    post:
+      summary: Add a member to an agent
+      operationId: addAgentMember
+      parameters:
+        - name: agent_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        description: Membership data including user id and role (owner/editor/user)
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: integer
+                role:
+                  type: string
+                  enum:
+                    - owner
+                    - editor
+                    - user
+                assigned_by:
+                  type: integer
+              required:
+                - user_id
+                - role
+                - assigned_by
+      responses:
+        '201':
+          description: Member added successfully
+        '400':
+          description: Invalid input
+
+  /agents/{agent_id}/system-prompt:
+    put:
+      summary: Update the system prompt for an agent (owners only)
+      operationId: updateSystemPrompt
+      parameters:
+        - name: agent_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        description: New system prompt content
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                system_prompt:
+                  type: string
+              required:
+                - system_prompt
+      responses:
+        '200':
+          description: System prompt updated successfully
+        '403':
+          description: Forbidden – only owners can update the system prompt
+
+  /agents/{agent_id}/knowledge/directories:
+    post:
+      summary: Create a new knowledge directory for an agent
+      operationId: createKnowledgeDirectory
+      parameters:
+        - name: agent_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        description: Directory information
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                created_by:
+                  type: integer
+              required:
+                - name
+                - created_by
+      responses:
+        '201':
+          description: Directory created successfully
+
+  /agents/{agent_id}/knowledge/documents:
+    post:
+      summary: Upload a new document (knowledge base) for an agent
+      operationId: uploadDocument
+      parameters:
+        - name: agent_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        description: Document upload. Supports multipart form data for file uploads or JSON for URLs.
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                knowledge_type:
+                  type: string
+                  enum:
+                    - file
+                    - url
+                file:
+                  type: string
+                  format: binary
+                  nullable: true
+                source_url:
+                  type: string
+                  nullable: true
+                created_by:
+                  type: integer
+                directory_id:
+                  type: integer
+              required:
+                - knowledge_type
+                - created_by
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                knowledge_type:
+                  type: string
+                  enum:
+                    - file
+                    - url
+                source_url:
+                  type: string
+                  nullable: true
+                created_by:
+                  type: integer
+                directory_id:
+                  type: integer
+              required:
+                - knowledge_type
+                - created_by
+      responses:
+        '201':
+          description: Document uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '400':
+          description: Invalid input
+
+    get:
+      summary: List all documents for an agent
+      operationId: listDocuments
+      parameters:
+        - name: agent_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Document'
+
+  /agents/{agent_id}/knowledge/documents/{document_id}:
+    get:
+      summary: Get document details
+      operationId: getDocument
+      parameters:
+        - name: agent_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: document_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Document details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '404':
+          description: Document not found
+
+  /agents/{agent_id}/knowledge/documents/{document_id}/import:
+    post:
+      summary: Import a document from another agent
+      operationId: importDocument
+      parameters:
+        - name: agent_id
+          in: path
+          description: The destination agent importing the document
+          required: true
+          schema:
+            type: integer
+        - name: document_id
+          in: path
+          description: The source document ID from another agent
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        description: Import details including source agent ID and who is performing the import
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                source_agent_id:
+                  type: integer
+                imported_by:
+                  type: integer
+              required:
+                - source_agent_id
+                - imported_by
+      responses:
+        '201':
+          description: Document imported successfully
+
+  /agents/{agent_id}/knowledge/documents/{document_id}/chunks:
+    get:
+      summary: Retrieve all chunks for a document
+      operationId: listDocumentChunks
+      parameters:
+        - name: agent_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: document_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of document chunks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DocumentChunk'
+        '404':
+          description: Document or chunks not found
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        username:
+          type: string
+        name:
+          type: string
+        department:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    Agent:
+      type: object
+      properties:
+        id:
+          type: integer
+        creator_id:
+          type: integer
+        base_agent_id:
+          type: integer
+          nullable: true
+        name:
+          type: string
+        goals:
+          type: string
+        description:
+          type: string
+        system_prompt:
+          type: string
+        kms_key:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Document:
+      type: object
+      properties:
+        id:
+          type: integer
+        agent_id:
+          type: integer
+        directory_id:
+          type: integer
+          nullable: true
+        title:
+          type: string
+        knowledge_type:
+          type: string
+          enum:
+            - file
+            - url
+        file_path:
+          type: string
+          nullable: true
+        source_url:
+          type: string
+          nullable: true
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    DocumentChunk:
+      type: object
+      properties:
+        id:
+          type: integer
+        document_id:
+          type: integer
+        chunk_index:
+          type: integer
+        encrypted_content:
+          type: string
+          format: byte
+        embedding:
+          type: array
+          items:
+            type: number
+        created_at:
+          type: string
+          format: date-time

@@ -8,3 +8,19 @@ wheels/
 
 # Virtual environments
 .venv
+
+venv
+# idea
+.idea/
+
+# env vars
+.env
+
+.ropeproject/
+
+# generated proto stuff
+*_pb2.py
+*_pb2.pyi
+*_grpc.py
+
+!*.proto
