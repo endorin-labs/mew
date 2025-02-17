@@ -29,7 +29,7 @@ cd mew
 #### 2. create a virtual environment:
 
 ```bash
-python -m venv .venv
+uv venv -p 3.12 --seed
 source .venv/bin/activate  # on Windows use: `.venv\Scripts\activate`
 ```
 
