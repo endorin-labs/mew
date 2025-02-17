@@ -1,23 +1,36 @@
 from functools import lru_cache
 import os
-from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 from urllib.parse import quote_plus
 
 load_dotenv()
 
 
-class Settings(BaseSettings):
-    db_user: str = os.getenv("DB_USER", "")
-    db_host: str = os.getenv("DB_HOST", "")
-    db_password: str = os.getenv("DB_PASSWORD", "")
-    db_port: str = os.getenv("DB_PORT", "")
-    db_name: str = os.getenv("DB_NAME", "")
-    secret_key: str = os.getenv("SECRET_KEY", "")
+class Settings:
+    def __init__(self):
+        self.db_user = os.getenv("DB_USER")
+        self.db_host = os.getenv("DB_HOST")
+        self.db_password = os.getenv("DB_PASSWORD")
+        self.db_port = os.getenv("DB_PORT")
+        self.db_name = os.getenv("DB_NAME")
+        self.secret_key = os.getenv("SECRET_KEY")
+
+        # validate required settings
+        if not all(
+            [
+                self.db_user,
+                self.db_host,
+                self.db_password,
+                self.db_port,
+                self.db_name,
+                self.secret_key,
+            ]
+        ):
+            raise ValueError("Missing required environment variables")
+
     @property
     def supabase_postgres_url(self) -> str:
         escaped_password = quote_plus(self.db_password)
-
         return (
             f"postgresql+psycopg://{self.db_user}:{escaped_password}"
             f"@{self.db_host}:{self.db_port}/{self.db_name}"

@@ -16,3 +16,4 @@ venv
 # env vars
 .env
 
+.ropeproject/

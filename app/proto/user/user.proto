@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package user;
 
-service UserService {
+service User {
   rpc SignUp (SignUpRequest) returns (UserResponse);
   rpc EditProfile (EditProfileRequest) returns (UserResponse);
   rpc Login (LoginRequest) returns (LoginResponse);
