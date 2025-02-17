@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from app.core.logging import setup_logging, LoggingMiddleware
-from app.api.routes import health
+from app.api.routes import health, auth
 
 logger = setup_logging(__name__)
 
@@ -9,6 +9,10 @@ def create_app() -> FastAPI:
     app = FastAPI(title="mew - a KB enrichment API")
 
     app.add_middleware(LoggingMiddleware)
+
+
+    # Include the authentication routes under a common prefix (e.g., /auth)
+    app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 
     app.include_router(health.router, tags=["health"])
 
