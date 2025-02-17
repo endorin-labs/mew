@@ -4,7 +4,7 @@ thanks for contributing!
 ## tech stack
 our core tech stack includes:
 
-- FastAPI for the API framework
+- gRPC with grpclib for our server framework
 - uv for dependency management
 - PostgreSQL + PGVector for our database (via Supabase)
 - Prefect for workflow orchestration
@@ -19,7 +19,7 @@ our core tech stack includes:
 
 ### first-time setup
 
-#### 1 .clone the repo:
+#### 1. clone the repo:
 
 ```bash
 git clone https://github.com/gupt-ai/mew.git
@@ -49,26 +49,20 @@ DB_PASSWORD=your_db_password
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=mew
+SECRET_KEY=secret_key_goes_here
 ```
 
 (ask @ahhcash or @aatish for the env vars)
 
-
 ### running locally
 
-1. start the dev server:
-
-```bash
-uvicorn server:app --reload --port 8080
-```
-or via
+1. start the gRPC server:
 
 ```bash
 python server.py
 ```
 
-2. api will be available at http://localhost:8080
-3. check http://localhost:8080/docs for the interactive API documentation
+2. server will be available on port 50051
 
 ### development workflow
 #### **code style**
@@ -79,9 +73,15 @@ ruff format .
 ```
 
 #### **type checking**
-mypy helps us catch type-related issues early:
+mypy helps us catch type-related issues early: (we aren't type safe yet 😢)
 ```bash
 mypy .
+```
+
+#### **generated code**
+proto stubs are generated automatically and shouldn't be committed. run:
+```bash
+python scripts/gen_proto.py
 ```
 
 #### **branch strategy**
@@ -95,11 +95,12 @@ mypy .
 ```bash
 mew/
 ├── app/                 # main application code
-│   ├── api/            # API routes and endpoints
-│   │   └── routes/     # route handlers
 │   ├── core/           # core configuration and utilities
 │   ├── models/         # data models and schemas
-│   └── services/       # business logic
+│   ├── proto/          # protobuf definitions
+│   │   ├── health/     # health check proto
+│   │   └── user/       # user service proto
+│   └── services/       # gRPC service implementations
 ├── tests/              # test directory (coming soon)
 └── scripts/            # utility scripts
 ```

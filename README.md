@@ -11,6 +11,7 @@ knowledge enrichment, user &amp; agent mgmt!
 - [ ] all agent related endpoints
 - [ ] all agent KB encrichment endpoints. Look at prefect for workflow orchestration - chunking and store docs
 - [x] tech stack: gRPClib, Prefect
+- [ ] complete type safety
 
 ## contributing
 head over to [CONTRIBUTING.md](CONTRIBUTING.md) to get started
