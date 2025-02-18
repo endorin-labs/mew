@@ -34,7 +34,3 @@ dev = [
 # handle missing stubs
 ignore_missing_imports = true
 
-[project.scripts]
-dev = "watchfiles 'python server.py' --filter python"
-gen-proto = "python -m scripts.gen_proto"
-start = "python -m scripts.gen_proto && watchfiles 'python server.py' --filter python"
