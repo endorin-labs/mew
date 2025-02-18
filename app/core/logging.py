@@ -1,83 +1,55 @@
 import logging
+from fastapi import Request
+from starlette.middleware.base import BaseHTTPMiddleware
+from typing import Callable
 import time
-from functools import wraps
-from colorama import Fore, Style, init
 
-# initialize colorama
-init()
+from uvicorn.logging import ColourizedFormatter
 
 
-class ColoredFormatter(logging.Formatter):
-    """Custom formatter for colored logs"""
-
-    COLORS = {
-        "INFO": Fore.GREEN,
-        "WARNING": Fore.YELLOW,
-        "ERROR": Fore.RED,
-        "CRITICAL": Fore.RED + Style.BRIGHT,
-        "DEBUG": Fore.BLUE,
-    }
-
-    def format(self, record):
-        # add colors based on log level
-        color = self.COLORS.get(record.levelname, "")
-        record.levelname = f"{color}{record.levelname}{Style.RESET_ALL}"
-        record.msg = f"{color}{record.msg}{Style.RESET_ALL}"
-        return super().format(record)
-
-
-def setup_logging(name: str) -> logging.Logger:
-    """Set up a logger with colored output"""
+def setup_logging(name: str):
     log = logging.getLogger(name)
 
     if log.hasHandlers():
         return log
 
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
+    root = logging.getLogger()
+    if not root.handlers:
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
 
-    formatter = ColoredFormatter(
-        fmt="%(levelname)s %(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
-    )
-    console_handler.setFormatter(formatter)
+        formatter = ColourizedFormatter(
+            fmt="%(levelprefix)s %(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+        )
+        console_handler.setFormatter(formatter)
 
-    log.addHandler(console_handler)
+        root.addHandler(console_handler)
+        root.setLevel(logging.INFO)
+
+    log.propagate = True
     log.setLevel(logging.INFO)
 
     return log
 
 
-def log_grpc_call(logger: logging.Logger):
-    """Decorator to log gRPC method calls with timing"""
-
-    def decorator(func):
-        @wraps(func)
-        async def wrapper(self, stream, *args, **kwargs):
-            method_name = func.__name__
-            start_time = time.time()
-
-            logger.info(f"gRPC call started: {method_name}")
-
-            try:
-                result = await func(self, stream, *args, **kwargs)
-                duration = time.time() - start_time
-                logger.info(
-                    f"gRPC call completed: {method_name} - Duration: {duration:.2f}s"
-                )
-                return result
-
-            except Exception as e:
-                duration = time.time() - start_time
-                logger.error(
-                    f"gRPC call failed: {method_name} - Error: {str(e)} - "
-                    f"Duration: {duration:.2f}s"
-                )
-                raise
-
-        return wrapper
-
-    return decorator
-
-
-# create a global logger
 logger = setup_logging(__name__)
+
+
+class LoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next: Callable):
+        start_time = time.time()
+        logger.info(f"Request started: {request.method} {request.url.path}")
+
+        try:
+            response = await call_next(request)
+            duration = time.time() - start_time
+            logger.info(
+                f"Request completed: {request.method} {request.url.path} "
+                f"- Status: {response.status_code} - Duration: {duration:.2f}s"
+            )
+            return response
+        except Exception as e:
+            logger.error(
+                f"Request failed: {request.method} {request.url.path} - Error: {str(e)}"
+            )
+            raise
