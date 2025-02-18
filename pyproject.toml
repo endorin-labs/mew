@@ -27,8 +27,14 @@ dev = [
     "mypy>=1.15.0",
     "pytest>=8.3.4",
     "ruff>=0.9.6",
+    "watchfiles>=1.0.4",
 ]
 
 [tool.mypy]
 # handle missing stubs
 ignore_missing_imports = true
+
+[project.scripts]
+dev = "watchfiles 'python server.py' --filter python"
+gen-proto = "python -m scripts.gen_proto"
+start = "python -m scripts.gen_proto && watchfiles 'python server.py' --filter python"

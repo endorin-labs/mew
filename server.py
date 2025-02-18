@@ -1,6 +1,8 @@
 import asyncio
 from grpclib.server import Server
 from grpclib.utils import graceful_exit
+
+from app.services.health_service import HealthService
 from app.services.user_service import UserService
 from app.core.logging import setup_logging
 
@@ -8,7 +10,8 @@ logger = setup_logging(__name__)
 
 
 async def start_server():
-    server = Server([UserService()])
+    services = [UserService(), HealthService()]
+    server = Server(services)
 
     with graceful_exit([server]):
         await server.start("0.0.0.0", 50051)
@@ -22,7 +25,7 @@ def serve():
     try:
         loop.run_until_complete(start_server())
     except KeyboardInterrupt:
-        logger.info("Server shutting down...")
+        logger.info("Server shutting down...👋")
     finally:
         loop.close()
 

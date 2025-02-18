@@ -59,7 +59,7 @@ SECRET_KEY=secret_key_goes_here
 1. start the gRPC server:
 
 ```bash
-python server.py
+watchfiles 'python server.py' --filter python
 ```
 
 2. server will be available on port 50051

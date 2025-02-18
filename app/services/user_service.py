@@ -2,19 +2,25 @@ from grpclib.server import Stream
 from grpclib.exceptions import GRPCError
 from grpclib.const import Status
 from sqlalchemy.orm import Session
+
+from app.core.logging import setup_logging, log_grpc_call
 from app.proto.user.user_grpc import UserBase
 from app.models.user import User
 from app.core.security import hash_password, verify_password, create_access_token
 from app.db.session import SessionLocal
+from app.proto.user.user_pb2 import UserResponse, LoginResponse
+
+logger = setup_logging(__name__)
 
 
 class UserService(UserBase):
     def __init__(self):
         self.db: Session = SessionLocal()
 
+    @log_grpc_call(logger)
     async def SignUp(self, stream: Stream):
         request = await stream.recv_message()
-
+        logger.info(f"signing up user: {request.email}")
         try:
             # hash the password and create user
             hashed = hash_password(request.password)
@@ -31,23 +37,23 @@ class UserService(UserBase):
             self.db.refresh(user)
 
             # send back the user data (excluding password)
-            await stream.send_message(
-                {
-                    "id": user.id,
-                    "email": user.email,
-                    "username": user.username,
-                    "name": user.name,
-                    "department": user.department,
-                }
+            response = UserResponse(
+                id=user.id,
+                email=user.email,
+                username=user.username,
+                name=user.name,
+                department=user.department,
             )
+            await stream.send_message(response)
 
         except Exception as e:
             self.db.rollback()
             raise GRPCError(Status.INTERNAL, str(e))
 
+    @log_grpc_call(logger)
     async def Login(self, stream: Stream):
         request = await stream.recv_message()
-
+        logger.info(f"logging in user: {request.email}")
         try:
             # find user and verify password
             user = self.db.query(User).filter(User.username == request.username).first()
@@ -58,27 +64,25 @@ class UserService(UserBase):
             token = create_access_token({"user_id": user.id})
 
             # send back token and user data
-            await stream.send_message(
-                {
-                    "token": token,
-                    "user": {
-                        "id": user.id,
-                        "email": user.email,
-                        "username": user.username,
-                        "name": user.name,
-                        "department": user.department,
-                    },
-                }
+            user_response = UserResponse(
+                id=user.id,
+                email=user.email,
+                username=user.username,
+                name=user.name,
+                department=user.department,
             )
+            response = LoginResponse(token=token, user=user_response)
+            await stream.send_message(response)
 
         except GRPCError:
             raise
         except Exception as e:
             raise GRPCError(Status.INTERNAL, str(e))
 
+    @log_grpc_call(logger)
     async def EditProfile(self, stream: Stream):
         request = await stream.recv_message()
-
+        logger.info(f"editing profile for: {request.email}")
         try:
             # find and update user
             user = self.db.query(User).filter(User.id == request.user_id).first()
@@ -95,16 +99,19 @@ class UserService(UserBase):
 
             # send back updated user data
             await stream.send_message(
-                {
-                    "id": user.id,
-                    "email": user.email,
-                    "username": user.username,
-                    "name": user.name,
-                    "department": user.department,
-                }
+                UserResponse(
+                    **{
+                        "id": user.id,
+                        "email": user.email,
+                        "username": user.username,
+                        "name": user.name,
+                        "department": user.department,
+                    }
+                )
             )
 
-        except GRPCError:
+        except GRPCError as e:
+            logger.error(f"encountered error: {e}")
             self.db.rollback()
             raise
         except Exception as e:
