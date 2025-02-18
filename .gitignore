@@ -15,7 +15,7 @@ venv
 
 # env vars
 .env
-
+*.pem
 .ropeproject/
 
 # generated proto stuff
@@ -24,3 +24,5 @@ venv
 *_grpc.py
 
 !*.proto
+
+llm.txt

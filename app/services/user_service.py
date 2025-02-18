@@ -53,7 +53,7 @@ class UserService(UserBase):
     @log_grpc_call(logger)
     async def Login(self, stream: Stream):
         request = await stream.recv_message()
-        logger.info(f"logging in user: {request.email}")
+        logger.info(f"logging in user: {request.username}")
         try:
             # find user and verify password
             user = self.db.query(User).filter(User.username == request.username).first()
