@@ -8,7 +8,7 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=vsock-proxy
 # Use RUST_LOG=trace for more verbose logging
-ExecStart=/usr/bin/vsock-proxy 8001 aws-0-us-east-1.pooler.supabase.com 5432 --config /etc/nitro_enclaves/vsock-proxy.yaml
+ExecStart=/bin/bash -ce "exec /usr/bin/socat vsock-listen:8001,fork,reuseaddr tcp-connect:aws-0-us-east-1.pooler.supabase.com:5432"
 Restart=always
 TimeoutSec=0
 

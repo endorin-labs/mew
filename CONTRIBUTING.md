@@ -46,9 +46,9 @@ fill in your .env with:
 # Database
 DB_USER=your_db_user
 DB_PASSWORD=your_db_password
-DB_HOST=localhost
+DB_HOST=127.0.0.2 # for enclave
 DB_PORT=5432
-DB_NAME=mew
+DB_NAME=postgres
 SECRET_KEY=secret_key_goes_here
 ```
 
