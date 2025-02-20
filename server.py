@@ -25,7 +25,7 @@ def serve():
     try:
         loop.run_until_complete(start_server())
     except KeyboardInterrupt:
-        logger.info("Server shutting down...👋")
+        logger.info("Server shutting down...")
     finally:
         loop.close()
 

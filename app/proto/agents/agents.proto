@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package agent;
+
+service Agent {
+  rpc Create (CreateAgentRequest) returns (AgentResponse);
+  rpc Get (GetAgentRequest) returns (AgentResponse);
+  rpc Update (UpdateAgentRequest) returns (AgentResponse);
+  rpc Delete (DeleteAgentRequest) returns (Empty);
+}
+
+message CreateAgentRequest {
+  int32 creator_id = 1;
+  optional int32 base_agent_id = 2;  // for derived agents
+  string name = 3;
+  optional string goals = 4;
+  optional string description = 5;
+  string system_prompt = 6;
+  string kms_key = 7;  // required for encryption
+}
+
+message GetAgentRequest {
+  int32 agent_id = 1;
+}
+
+message UpdateAgentRequest {
+  int32 agent_id = 1;
+  optional string name = 2;
+  optional string goals = 3;
+  optional string description = 4;
+  optional string system_prompt = 5;  // only owners can update this
+}
+
+message DeleteAgentRequest {
+  int32 agent_id = 1;
+}
+
+message AgentResponse {
+  int32 id = 1;
+  int32 creator_id = 2;
+  optional int32 base_agent_id = 3;
+  string name = 4;
+  optional string goals = 5;
+  optional string description = 6;
+  string system_prompt = 7;
+  string kms_key = 8;
+  string created_at = 9;
+  string updated_at = 10;
+}
+
+message Empty {}
