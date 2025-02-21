@@ -16,7 +16,6 @@ message CreateAgentRequest {
   optional string goals = 4;
   optional string description = 5;
   string system_prompt = 6;
-  string kms_key = 7;  // required for encryption
 }
 
 message GetAgentRequest {
