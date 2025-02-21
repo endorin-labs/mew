@@ -1,15 +1,19 @@
 # // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # // SPDX-License-Identifier: MIT-0
 
-## build kms-enclave-cli from this docker file https://github.com/aws/aws-nitro-enclaves-sdk-c/blob/main/containers/Dockerfile.al2
-ARG BASE_IMAGE=public.ecr.aws/amazonlinux/amazonlinux:2
+ARG BASE_IMAGE=public.ecr.aws/amazonlinux/amazonlinux:2023
 
 FROM $BASE_IMAGE as builder
 
-RUN yum upgrade -y
-RUN amazon-linux-extras enable epel
-RUN yum clean -y metadata && yum install -y epel-release
-RUN yum install -y \
+# Upgrade packages using DNF
+RUN dnf upgrade -y
+
+# AL2023 does not provide an epel-release package; omit these lines
+# RUN dnf install epel-release -y
+# RUN yum clean -y metadata && yum install -y epel-release
+
+# Install required packages using DNF
+RUN dnf install -y \
 	cmake3 \
 	gcc \
 	git \
@@ -20,12 +24,13 @@ RUN yum install -y \
 	ninja-build \
 	doxygen
 
+# Install Rust (using the minimal profile with a fixed toolchain version)
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal --default-toolchain 1.63
 
 # We keep the build artifacts in the -build directory
 WORKDIR /tmp/crt-builder
 
-RUN git clone --depth 1 -b v0.4.0  https://github.com/aws/aws-nitro-enclaves-sdk-c
+RUN git clone --depth 1 -b v0.4.0 https://github.com/aws/aws-nitro-enclaves-sdk-c
 
 RUN git clone --depth 1 -b v1.12.0 https://github.com/awslabs/aws-lc.git aws-lc
 RUN cmake3 -DCMAKE_PREFIX_PATH=/usr -DCMAKE_INSTALL_PREFIX=/usr -GNinja -DBUILD_TESTING=0 -S aws-lc -B aws-lc/build .
@@ -66,7 +71,7 @@ RUN cmake3 --build aws-c-auth/build --parallel $(nproc) --target install
 
 RUN git clone --depth 1 -b json-c-0.16-20220414 https://github.com/json-c/json-c.git
 RUN cmake3 -DCMAKE_PREFIX_PATH=/usr -DBUILD_TESTING=0 -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=OFF -GNinja -S json-c -B json-c/build
-RUN cmake3 --build json-c/build --parallel $(nproc)  --target install
+RUN cmake3 --build json-c/build --parallel $(nproc) --target install
 
 RUN git clone --depth 1 -b v0.4.0 https://github.com/aws/aws-nitro-enclaves-nsm-api.git
 RUN source $HOME/.cargo/env && cd aws-nitro-enclaves-nsm-api && cargo build --release --jobs $(nproc) -p nsm-lib
@@ -78,8 +83,10 @@ RUN cmake3 -DCMAKE_PREFIX_PATH=/usr -DCMAKE_INSTALL_PREFIX=/usr -GNinja \
 RUN cmake3 --build aws-nitro-enclaves-sdk-c/build --parallel $(nproc) --target install
 RUN cmake3 --build aws-nitro-enclaves-sdk-c/build --parallel $(nproc) --target docs
 
-# enclave_base
+# Build the base image for Nitro Enclaves (enclave_base)
 FROM $BASE_IMAGE as enclave_base
 WORKDIR /app
-COPY --from=builder /usr/lib64/libnsm.so /usr/lib64/libnsm.so /app/
+# Copy required binaries from the builder stage.
+COPY --from=builder /usr/lib64/libnsm.so /usr/lib64/libnsm.so
+# Copy the kms-enclave-cli built by aws-nitro-enclaves-sdk-c.
 COPY --from=builder /usr/bin/kmstool_enclave_cli /app/

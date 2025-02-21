@@ -1,4 +1,5 @@
-Description=Nitro Enclaves vsock Proxy
+[Unit]
+Description=Supabase vsock Proxy
 After=network-online.target
 DefaultDependencies=no
 
