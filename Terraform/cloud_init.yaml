@@ -1,0 +1,95 @@
+#cloud-config
+write_files:
+  - path: /etc/systemd/system/db-socat-proxy.service
+    owner: root:root
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=DB Socat Proxy
+      After=network-online.target
+      DefaultDependencies=no
+
+      [Service]
+      Type=simple
+      StandardOutput=journal
+      StandardError=journal
+      SyslogIdentifier=db-socat-proxy
+      ExecStart=/bin/bash -ce "exec /usr/local/bin/socat vsock-listen:8001,fork,reuseaddr tcp-connect:aws-0-us-east-1.pooler.supabase.com:5432"
+      Restart=always
+      TimeoutSec=0
+
+      [Install]
+      WantedBy=multi-user.target
+
+  - path: /etc/systemd/system/llm-socat-proxy.service
+    owner: root:root
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=LLM Socat Proxy
+      After=network-online.target
+      DefaultDependencies=no
+
+      [Service]
+      Type=simple
+      StandardOutput=journal
+      StandardError=journal
+      SyslogIdentifier=llm-socat-proxy
+      ExecStart=/bin/bash -ce "exec /usr/local/bin/socat tcp-listen:50051,fork,reuseaddr VSOCK-CONNECT:22:8000"
+      Restart=always
+      TimeoutSec=0
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  - |
+    # Update packages and install required extras
+    sudo dnf install aws-nitro-enclaves-cli -y
+    sudo dnf install aws-nitro-enclaves-cli-devel -y
+    sudo yum install git -y
+    sudo yum upgrade -y
+    sudo dnf install epel-release -y
+    sudo yum clean -y metadata && sudo yum install -y epel-release
+    sudo yum install -y cmake3 gcc git make gcc-c++ ninja-build
+
+    # Add ec2-user to necessary groups for Nitro Enclaves and docker.
+    sudo usermod -aG ne ec2-user
+    sudo usermod -aG docker ec2-user
+
+    # Start and enable docker
+    sudo systemctl start docker
+    sudo systemctl enable docker
+
+    # Download and install socat from source
+    wget http://www.dest-unreach.org/socat/download/socat-1.8.0.2.tar.gz -P /tmp
+    cd /tmp
+    tar xzf socat-1.8.0.2.tar.gz
+    cd socat-1.8.0.2
+    ./configure
+    make
+    sudo make install
+
+    # Clean up socat build files
+    cd ~
+    rm -rf /tmp/socat-1.8.0.2 /tmp/socat-1.8.0.2.tar.gz
+
+    # Clone your repository and build the Docker image.
+    cd /home/ec2-user
+    if [ ! -d "mew" ]; then
+      git clone https://github.com/gupt-ai/mew.git
+    else
+      cd mew && git pull origin main && cd ..
+    fi
+    cd mew
+    # Build the Docker image (ensure your Dockerfile is named correctly)
+    sudo docker build -t enclave_base enclaves/enclave_base
+    # Write commands to build the encalve and pay attention to CID mentioned in the commands and give same CID
+    sudo docker build -t enclave .
+    
+
+  - systemctl daemon-reload
+  - systemctl enable db-socat-proxy.service
+  - systemctl enable llm-socat-proxy.service
+  - systemctl reload-or-restart db-socat-proxy.service
+  - systemctl reload-or-restart llm-socat-proxy.service

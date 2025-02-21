@@ -12,7 +12,8 @@ wheels/
 venv
 # idea
 .idea/
-
+.terraform
+.terraform.*
 # env vars
 .env
 *.pem
