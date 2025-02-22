@@ -11,6 +11,7 @@ logger = setup_logging(__name__)
 
 async def start_server():
     services = [UserService(), HealthService()]
+
     server = Server(services)
 
     with graceful_exit([server]):
