@@ -1,9 +1,7 @@
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, Enum
 from sqlalchemy.sql import func
-from sqlalchemy.ext.declarative import declarative_base
 from app.core.roles import Roles
-
-Base = declarative_base()
+from app.models import Base
 
 
 class AgentMembership(Base):

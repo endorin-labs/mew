@@ -7,6 +7,10 @@ service Agent {
   rpc Get (GetAgentRequest) returns (AgentResponse);
   rpc Update (UpdateAgentRequest) returns (AgentResponse);
   rpc Delete (DeleteAgentRequest) returns (Empty);
+  rpc AddMember (AddMemberRequest) returns (Empty);
+  rpc UpdateMemberRole (UpdateMemberRoleRequest) returns (Empty);
+  rpc RemoveMember (RemoveMemberRequest) returns (Empty);
+  rpc ListMembers (ListMembersRequest) returns (ListMembersResponse);
 }
 
 message CreateAgentRequest {
@@ -45,3 +49,30 @@ message AgentResponse {
 }
 
 message Empty {}
+
+message AddMemberRequest {
+  int32 user_id = 1;
+  string role = 2;
+}
+
+message UpdateMemberRoleRequest {
+  int32 user_id = 1;
+  string role = 2;
+}
+
+message RemoveMemberRequest {
+  int32 user_id = 1;
+}
+
+message ListMembersRequest {}
+
+message MemberInfo {
+  int32 user_id = 1;
+  string role = 2;
+  string username = 3;
+  string email = 4;
+}
+
+message ListMembersResponse {
+  repeated MemberInfo members = 1;
+}

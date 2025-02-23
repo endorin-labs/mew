@@ -2,6 +2,7 @@ import asyncio
 from grpclib.server import Server
 from grpclib.utils import graceful_exit
 
+from app.services.agents_service import AgentsService
 from app.services.health_service import HealthService
 from app.services.user_service import UserService
 from app.core.logging import setup_logging
@@ -10,7 +11,7 @@ logger = setup_logging(__name__)
 
 
 async def start_server():
-    services = [UserService(), HealthService()]
+    services = [UserService(), HealthService(), AgentsService()]
 
     server = Server(services)
 

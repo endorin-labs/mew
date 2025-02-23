@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package roles;
+
+service Roles {
+  rpc AssignRole (AssignRoleRequest) returns (RoleResponse);
+  rpc RevokeRole (RevokeRoleRequest) returns (RoleResponse);
+  rpc ListMembers (ListMembersRequest) returns (ListMembersResponse);
+}
+
+message AssignRoleRequest {
+  int32 user_id = 1;
+  string role = 2;  // "OWNER", "ADMIN", "VIEWER"
+}
+
+message RevokeRoleRequest {
+  int32 user_id = 1;
+  string role = 2;  // needed to check if we're revoking an owner role
+}
+
+message RoleResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ListMembersRequest {
+  // empty since we get agent_id from auth context
+}
+
+message ListMembersResponse {
+  repeated MemberInfo members = 1;
+}
+
+message MemberInfo {
+  int32 user_id = 1;
+  string role = 2;
+  int32 assigned_by = 3;
+  string assigned_at = 4;
+}

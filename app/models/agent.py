@@ -1,9 +1,10 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, event
 from sqlalchemy.sql import func
-from sqlalchemy.ext.declarative import declarative_base
 
-Base = declarative_base()
+from app.core.logging import setup_logging
+from app.models import Base
 
+logger = setup_logging(__name__)
 
 class Agent(Base):
     __tablename__ = "agents"
@@ -26,3 +27,4 @@ class Agent(Base):
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
