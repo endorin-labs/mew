@@ -4,6 +4,7 @@ from grpclib.const import Status
 from sqlalchemy.orm import Session
 
 from app.core.logging import setup_logging, log_grpc_call
+from app.core.auth import requires_auth, get_auth_context
 from app.proto.user.user_grpc import UserBase
 from app.models.user import User
 from app.core.security import hash_password, verify_password, create_access_token
@@ -18,6 +19,7 @@ class UserService(UserBase):
         self.db: Session = SessionLocal()
 
     @log_grpc_call(logger)
+    @requires_auth(skip_auth=True)  # no auth needed for signup
     async def SignUp(self, stream: Stream):
         request = await stream.recv_message()
         logger.info(f"signing up user: {request.email}")
@@ -51,6 +53,7 @@ class UserService(UserBase):
             raise GRPCError(Status.INTERNAL, str(e))
 
     @log_grpc_call(logger)
+    @requires_auth(skip_auth=True)  # no auth needed for login
     async def Login(self, stream: Stream):
         request = await stream.recv_message()
         logger.info(f"logging in user: {request.username}")
@@ -74,18 +77,22 @@ class UserService(UserBase):
             response = LoginResponse(token=token, user=user_response)
             await stream.send_message(response)
 
-        except GRPCError:
+        except GRPCError as ge:
+            logger.error(f"error: {ge}")
             raise
         except Exception as e:
             raise GRPCError(Status.INTERNAL, str(e))
 
     @log_grpc_call(logger)
+    @requires_auth()  # auth required for profile edit
     async def EditProfile(self, stream: Stream):
         request = await stream.recv_message()
-        logger.info(f"editing profile for: {request.email}")
+        auth_context = get_auth_context(stream)
+        logger.info(f"editing profile for user: {auth_context.user_id}")
+
         try:
-            # find and update user
-            user = self.db.query(User).filter(User.id == request.user_id).first()
+            # find and update user using auth context
+            user = self.db.query(User).filter(User.id == auth_context.user_id).first()
             if not user:
                 raise GRPCError(Status.NOT_FOUND, "User not found")
 
@@ -100,13 +107,11 @@ class UserService(UserBase):
             # send back updated user data
             await stream.send_message(
                 UserResponse(
-                    **{
-                        "id": user.id,
-                        "email": user.email,
-                        "username": user.username,
-                        "name": user.name,
-                        "department": user.department,
-                    }
+                    id=user.id,
+                    email=user.email,
+                    username=user.username,
+                    name=user.name,
+                    department=user.department,
                 )
             )
 

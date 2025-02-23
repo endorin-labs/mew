@@ -26,8 +26,13 @@ dev = [
     "grpc-stubs",
     "mypy",
     "pytest",
+    "ruff>=0.9.7",
 ]
 
 [tool.mypy]
 # handle missing stubs
 ignore_missing_imports = true
+
+
+[tool.setuptools]
+packages = ["app"]

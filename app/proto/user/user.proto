@@ -17,11 +17,10 @@ message SignUpRequest {
 }
 
 message EditProfileRequest {
-  int32 user_id = 1;
-  string email = 2;
-  string username = 3;
-  string name = 4;
-  string department = 5;
+  string email = 1;
+  string username = 2;
+  string name = 3;
+  string department = 4;
 }
 
 message LoginRequest {
