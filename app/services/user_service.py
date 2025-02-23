@@ -77,7 +77,8 @@ class UserService(UserBase):
             response = LoginResponse(token=token, user=user_response)
             await stream.send_message(response)
 
-        except GRPCError:
+        except GRPCError as ge:
+            logger.error(f"error: {ge}")
             raise
         except Exception as e:
             raise GRPCError(Status.INTERNAL, str(e))

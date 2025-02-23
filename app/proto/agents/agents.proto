@@ -19,19 +19,16 @@ message CreateAgentRequest {
 }
 
 message GetAgentRequest {
-  int32 agent_id = 1;
 }
 
 message UpdateAgentRequest {
-  int32 agent_id = 1;
-  optional string name = 2;
-  optional string goals = 3;
-  optional string description = 4;
-  optional string system_prompt = 5;  // only owners can update this
+  optional string name = 1;
+  optional string goals = 2;
+  optional string description = 3;
+  optional string system_prompt = 4;
 }
 
 message DeleteAgentRequest {
-  int32 agent_id = 1;
 }
 
 message AgentResponse {

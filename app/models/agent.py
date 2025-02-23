@@ -21,9 +21,6 @@ class Agent(Base):
     description = Column(Text)
     system_prompt = Column(Text)
 
-    # for encryption/decryption of the above fields
-    kms_key = Column(String(255), nullable=False)
-
     # timestamps bc why not
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
