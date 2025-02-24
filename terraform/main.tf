@@ -1,12 +1,11 @@
 provider "aws" {
   region  = "us-east-1"
-  profile = "156041430088_AdministratorAccess" # Choose profile from your ~/.aws/credentials
 }
 
 resource "aws_instance" "enclave_instance" {
   ami                    = "ami-053a45fff0a704a47"
   instance_type          = "m5n.2xlarge"
-  key_name               = "vsock-trial-2"          # Ensure this key pair exists
+  key_name               = "vsock-aakash"          # Ensure this key pair exists
   availability_zone      = "us-east-1d"
   subnet_id              = "subnet-06c45597699591587"
   vpc_security_group_ids = ["sg-02f392c3e8121fb74"]
