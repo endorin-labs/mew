@@ -7,10 +7,6 @@ service Agent {
   rpc Get (GetAgentRequest) returns (AgentResponse);
   rpc Update (UpdateAgentRequest) returns (AgentResponse);
   rpc Delete (DeleteAgentRequest) returns (Empty);
-  rpc AddMember (AddMemberRequest) returns (Empty);
-  rpc UpdateMemberRole (UpdateMemberRoleRequest) returns (Empty);
-  rpc RemoveMember (RemoveMemberRequest) returns (Empty);
-  rpc ListMembers (ListMembersRequest) returns (ListMembersResponse);
 }
 
 message CreateAgentRequest {
