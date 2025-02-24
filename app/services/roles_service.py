@@ -10,11 +10,7 @@ from app.core.roles import Roles
 from app.db.session import SessionLocal
 from app.models.agent_membership import AgentMembership
 from app.proto.roles.roles_grpc import RolesBase
-from app.proto.roles.roles_pb2 import (
-    RoleResponse,
-    ListMembersResponse,
-    MemberInfo
-)
+from app.proto.roles.roles_pb2 import RoleResponse, ListMembersResponse, MemberInfo
 
 logger = setup_logging(__name__)
 
@@ -25,19 +21,25 @@ class RolesService(RolesBase):
 
     @log_grpc_call(logger)
     @requires_auth(require_agent=True)
-    @requires_permission([Roles.OWNER, Roles.ADMIN])  # only owners/admins can assign roles
+    @requires_permission(
+        [Roles.OWNER, Roles.ADMIN]
+    )  # only owners/admins can assign roles
     async def AssignRole(self, stream: Stream):
         request = await stream.recv_message()
         auth_context = get_auth_context(stream)
 
         try:
             # check if membership already exists
-            existing = self.db.query(AgentMembership).filter(
-                and_(
-                    AgentMembership.agent_id == auth_context.agent_id,
-                    AgentMembership.user_id == request.user_id
+            existing = (
+                self.db.query(AgentMembership)
+                .filter(
+                    and_(
+                        AgentMembership.agent_id == auth_context.agent_id,
+                        AgentMembership.user_id == request.user_id,
+                    )
                 )
-            ).first()
+                .first()
+            )
 
             if existing:
                 # update existing role
@@ -49,16 +51,15 @@ class RolesService(RolesBase):
                     agent_id=auth_context.agent_id,
                     user_id=request.user_id,
                     role=request.role,
-                    assigned_by=auth_context.user_id
+                    assigned_by=auth_context.user_id,
                 )
                 self.db.add(membership)
 
             self.db.commit()
 
-            await stream.send_message(RoleResponse(
-                success=True,
-                message="Role assigned successfully"
-            ))
+            await stream.send_message(
+                RoleResponse(success=True, message="Role assigned successfully")
+            )
 
         except Exception as e:
             self.db.rollback()
@@ -71,17 +72,20 @@ class RolesService(RolesBase):
         auth_context = get_auth_context(stream)
 
         try:
-            members = self.db.query(AgentMembership).filter(
-                AgentMembership.agent_id == auth_context.agent_id
-            ).all()
+            members = (
+                self.db.query(AgentMembership)
+                .filter(AgentMembership.agent_id == auth_context.agent_id)
+                .all()
+            )
 
             member_infos = [
                 MemberInfo(
                     user_id=member.user_id,
                     role=member.role,
                     assigned_by=member.assigned_by,
-                    assigned_at=str(member.assigned_at)
-                ) for member in members
+                    assigned_at=str(member.assigned_at),
+                )
+                for member in members
             ]
 
             await stream.send_message(ListMembersResponse(members=member_infos))
@@ -91,7 +95,9 @@ class RolesService(RolesBase):
 
     @log_grpc_call(logger)
     @requires_auth(require_agent=True)
-    @requires_permission([Roles.OWNER, Roles.ADMIN])  # only owners/admins can revoke roles
+    @requires_permission(
+        [Roles.OWNER, Roles.ADMIN]
+    )  # only owners/admins can revoke roles
     async def RevokeRole(self, stream: Stream):
         request = await stream.recv_message()
         auth_context = get_auth_context(stream)
@@ -99,36 +105,43 @@ class RolesService(RolesBase):
         try:
             # first check if we're trying to revoke the last owner
             if request.role == "OWNER":
-                owner_count = self.db.query(AgentMembership).filter(
-                    and_(
-                        AgentMembership.agent_id == auth_context.agent_id,
-                        AgentMembership.role == "OWNER"
+                owner_count = (
+                    self.db.query(AgentMembership)
+                    .filter(
+                        and_(
+                            AgentMembership.agent_id == auth_context.agent_id,
+                            AgentMembership.role == "OWNER",
+                        )
                     )
-                ).count()
+                    .count()
+                )
 
                 if owner_count <= 1:
                     raise GRPCError(
                         Status.FAILED_PRECONDITION,
-                        "Cannot revoke the last owner's role"
+                        "Cannot revoke the last owner's role",
                     )
 
             # delete the membership
-            result = self.db.query(AgentMembership).filter(
-                and_(
-                    AgentMembership.agent_id == auth_context.agent_id,
-                    AgentMembership.user_id == request.user_id
+            result = (
+                self.db.query(AgentMembership)
+                .filter(
+                    and_(
+                        AgentMembership.agent_id == auth_context.agent_id,
+                        AgentMembership.user_id == request.user_id,
+                    )
                 )
-            ).delete()
+                .delete()
+            )
 
             if not result:
                 raise GRPCError(Status.NOT_FOUND, "Membership not found")
 
             self.db.commit()
 
-            await stream.send_message(RoleResponse(
-                success=True,
-                message="Role revoked successfully"
-            ))
+            await stream.send_message(
+                RoleResponse(success=True, message="Role revoked successfully")
+            )
 
         except GRPCError as e:
             self.db.rollback()
