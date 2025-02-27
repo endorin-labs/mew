@@ -8,7 +8,7 @@ echo "127.0.0.2   aws-0-us-east-1.pooler.supabase.com" >> /etc/hosts
 socat vsock-listen:8000,fork,reuseaddr tcp-connect:localhost:50051 & # when the enclave is a server
 socat tcp-listen:5432,fork,bind=127.0.0.2,reuseaddr,su=nobody vsock-connect:3:8001 & # when the enclave is a client
 . /app/.venv/bin/activate
-python3.8 /app/server.py
+python3.12 /app/server.py
 # On host for database
 # open a new terminal and add
 # sudo socat VSOCK-LISTEN:8001,fork,reuseaddr tcp-connect:aws-0-us-east-1.pooler.supabase.com:5432 & # when ec2 is listening from outside (server)

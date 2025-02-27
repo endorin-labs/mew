@@ -3,7 +3,7 @@ name = "mew"
 version = "0.1.0"
 description = "KB enrichment API"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 dependencies = [
     "python-dotenv>=1.0.1",
     "grpcio>=1.70.0",
