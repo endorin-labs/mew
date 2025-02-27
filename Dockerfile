@@ -20,10 +20,9 @@ COPY . /app/
 # use uv to set up deps (way faster than pip)
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     /root/.local/bin/uv venv -p python3.12 --seed && \
-    /root/.local/bin/uv pip install -e ".[dev]"
+    /root/.local/bin/uv pip install -e ".[dev]" && \
+    .venv/bin/python scripts/gen_proto.py # rest of your setup
 
-
-# rest of your setup
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
