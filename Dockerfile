@@ -1,37 +1,29 @@
 FROM enclave_base
 WORKDIR /app
 
-# --- Install build tools and Python 3.8 ---
+# update system and install python 3.12 deps
 RUN yum update -y && \
-    yum install -y gcc iproute openssl-devel bzip2-devel libffi-devel zlib-devel wget tar gzip make
+    yum install -y gcc iproute openssl-devel bzip2-devel libffi-devel \
+    zlib-devel wget tar gzip make
 
-# Install Python 3.8 from amazon-linux-extras
-RUN amazon-linux-extras install python3.8
+# add rpmfusion for py3.12
+RUN dnf install -y python3.12
 
-# (Optional) Ensure python3.8 is in PATH. On Amazon Linux, it's typically in /usr/bin.
-# ENV PATH="/usr/bin:${PATH}"
+# get uv (way cleaner than pip)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    echo 'export PATH="/root/.cargo/bin:$PATH"' >> ~/.bashrc
 
-# --- Download, build, and install socat ---
-RUN wget http://www.dest-unreach.org/socat/download/socat-1.8.0.2.tar.gz && \
-    tar xzf socat-1.8.0.2.tar.gz && \
-    cd socat-1.8.0.2 && \
-    ./configure && \
-    make && \
-    make install && \
-    cd .. && rm -rf socat-1.8.0.2 socat-1.8.0.2.tar.gz
 
-# --- Copy Application Code ---
-# This ensures that pyproject.toml, setup.py, and all other project files are present.
+# copy your app code
 COPY . /app/
 
-# --- Install uv and set up the virtual environment ---
-# (Since the project files are now present, uv can detect the Python project)
-RUN python3.8 -m pip install --upgrade pip && \
-    python3.8 -m pip install uv && \
-    uv venv -p python3.8 --seed && \
-    uv pip install -e ".[dev]"
+# use uv to set up deps (way faster than pip)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    /root/.local/bin/uv venv -p python3.12 --seed && \
+    /root/.local/bin/uv pip install -e ".[dev]"
 
-# --- Setup entrypoint ---
+
+# rest of your setup
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
