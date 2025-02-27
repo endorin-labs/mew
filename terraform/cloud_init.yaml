@@ -75,14 +75,11 @@ runcmd:
     cd socat-1.8.0.2
     ./configure && make && sudo make install
     cd ~ && rm -rf /tmp/socat-1.8.0.2 /tmp/socat-1.8.0.2.tar.gz
-
-    # install uv for dependency management
-    curl -LsSf https://astral.sh/uv/install.sh | sh
     
     # clone and build your app
     cd /home/ec2-user
     if [ ! -d "mew" ]; then
-      git clone https://github.com/gupt-ai/mew.git
+      git clone https://github.com/endorin-labs/mew.git
     else
       cd mew && git pull origin main && cd ..
     fi
@@ -91,6 +88,9 @@ runcmd:
     # build docker images
     sudo docker build -t enclave_base enclaves/enclave_base
     sudo docker build -t enclave .
+
+#    look at ACM provisioning before this
+#    nitro-cli build-enclave --output-path enclave.eif --docker-uri enclave
 
   # start the proxy services
   - systemctl daemon-reload
